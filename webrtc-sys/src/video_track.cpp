@@ -111,7 +111,7 @@ VideoTrackSource::InternalSource::InternalSource(
 VideoTrackSource::InternalSource::~InternalSource() {}
 
 bool VideoTrackSource::InternalSource::is_screencast() const {
-  return false;
+  return true;
 }
 
 absl::optional<bool> VideoTrackSource::InternalSource::needs_denoising() const {
