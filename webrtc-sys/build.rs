@@ -49,6 +49,7 @@ fn main() {
         "src/android.rs",
         "src/prohibit_libsrtp_initialization.rs",
         "src/apm.rs",
+        "src/desktop_capturer.rs",
     ]);
 
     builder.files(&[
@@ -77,6 +78,7 @@ fn main() {
         "src/global_task_queue.cpp",
         "src/prohibit_libsrtp_initialization.cpp",
         "src/apm.cpp",
+        "src/desktop_capturer.cpp",
     ]);
 
     let webrtc_dir = webrtc_sys_build::webrtc_dir();
@@ -154,6 +156,7 @@ fn main() {
             println!("cargo:rustc-link-lib=framework=QuartzCore");
             println!("cargo:rustc-link-lib=framework=IOKit");
             println!("cargo:rustc-link-lib=framework=IOSurface");
+            println!("cargo:rustc-link-lib=framework=ScreenCaptureKit");
 
             configure_darwin_sysroot(&mut builder);
 

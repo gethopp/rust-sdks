@@ -37,6 +37,7 @@ pub mod video_frame_buffer;
 pub mod video_track;
 pub mod webrtc;
 pub mod yuv_helper;
+pub mod desktop_capturer;
 
 pub const MEDIA_TYPE_VIDEO: &str = "video";
 pub const MEDIA_TYPE_AUDIO: &str = "audio";

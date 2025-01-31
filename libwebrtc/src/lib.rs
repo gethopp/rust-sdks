@@ -61,6 +61,7 @@ pub mod video_frame;
 pub mod video_source;
 pub mod video_stream;
 pub mod video_track;
+pub mod desktop_capturer;
 
 #[cfg(not(target_arch = "wasm32"))]
 pub mod native {
