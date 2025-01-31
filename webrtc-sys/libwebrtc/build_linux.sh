@@ -115,7 +115,7 @@ args="is_debug=$debug  \
   ffmpeg_branding=\"Chrome\" \
   rtc_use_h264=true \
   rtc_use_h265=true \
-  rtc_use_pipewire=false \
+  rtc_use_pipewire=true \
   symbol_level=0 \
   enable_iterator_debugging=false \
   use_rtti=true \
