@@ -48,6 +48,16 @@ void DesktopCapturer::OnCaptureResult(
                               std::make_unique<DesktopFrame>(std::move(frame)));
 }
 
+void DesktopCapturer::set_excluded_applications(
+    rust::Vec<rust::String> excluded_applications) const {
+  std::vector<std::string> excluded_apps{};
+  for (auto& app : excluded_applications) {
+    const char *data = app.data();
+    excluded_apps.push_back(std::string(data, app.size()));
+  }
+  capturer->SetExcludedApplications(std::move(excluded_apps));
+}
+
 rust::Vec<Source> DesktopCapturer::get_source_list() const {
   SourceList list{};
   bool res = sources_capturer->GetSourceList(&list);

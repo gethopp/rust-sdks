@@ -44,6 +44,7 @@ class DesktopCapturer : public webrtc::DesktopCapturer::Callback {
   bool select_source(uint64_t id) const { return capturer->SelectSource(id); };
   void start() { capturer->Start(this); };
   void capture_frame() const { capturer->CaptureFrame(); };
+  void set_excluded_applications(rust::Vec<rust::String> excluded_applications) const;
 
  private:
   std::unique_ptr<webrtc::DesktopCapturer> capturer;

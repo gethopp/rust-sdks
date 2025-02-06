@@ -55,6 +55,10 @@ impl DesktopCapturer {
         }
         sources
     }
+
+    pub fn set_excluded_applications(&self, applications: Vec<String>) {
+        self.sys_handle.set_excluded_applications(applications);
+    }
 }
 
 pub struct DesktopFrame {
