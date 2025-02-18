@@ -56,7 +56,7 @@ impl DesktopCapturer {
         sources
     }
 
-    pub fn set_excluded_applications(&self, applications: Vec<String>) {
+    pub fn set_excluded_applications(&self, applications: Vec<u64>) {
         self.sys_handle.set_excluded_applications(applications);
     }
 }

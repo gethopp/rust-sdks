@@ -49,11 +49,10 @@ void DesktopCapturer::OnCaptureResult(
 }
 
 void DesktopCapturer::set_excluded_applications(
-    rust::Vec<rust::String> excluded_applications) const {
-  std::vector<std::string> excluded_apps{};
+    rust::Vec<uint64_t> excluded_applications) const {
+  std::vector<uint64_t> excluded_apps{};
   for (auto& app : excluded_applications) {
-    const char *data = app.data();
-    excluded_apps.push_back(std::string(data, app.size()));
+    excluded_apps.push_back(app);
   }
   capturer->SetExcludedApplications(std::move(excluded_apps));
 }

@@ -47,7 +47,7 @@ impl DesktopCapturer {
         source_list.into_iter().map(|source| CaptureSource { sys_handle: source }).collect()
     }
 
-    pub fn set_excluded_applications(&self, applications: Vec<String>) {
+    pub fn set_excluded_applications(&self, applications: Vec<u64>) {
         self.handle.set_excluded_applications(applications);
     }
 }
