@@ -145,6 +145,7 @@ pub(crate) enum CaptureResult {
     Success,
     ErrorTemporary,
     ErrorPermanent,
+    ErrorUserStopped,
 }
 
 fn capture_result_from_sys(result: sys_dc::ffi::CaptureResult) -> CaptureResult {
@@ -152,6 +153,7 @@ fn capture_result_from_sys(result: sys_dc::ffi::CaptureResult) -> CaptureResult 
         sys_dc::ffi::CaptureResult::Success => CaptureResult::Success,
         sys_dc::ffi::CaptureResult::ErrorTemporary => CaptureResult::ErrorTemporary,
         sys_dc::ffi::CaptureResult::ErrorPermanent => CaptureResult::ErrorPermanent,
+        sys_dc::ffi::CaptureResult::ErrorUserStopped => CaptureResult::ErrorUserStopped,
         _ => CaptureResult::ErrorPermanent,
     }
 }

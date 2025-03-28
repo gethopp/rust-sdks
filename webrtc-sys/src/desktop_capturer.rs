@@ -30,6 +30,7 @@ pub mod ffi {
         Success,
         ErrorTemporary,
         ErrorPermanent,
+        ErrorUserStopped,
     }
 
     unsafe extern "C++" {

@@ -112,6 +112,7 @@ pub enum CaptureResult {
     Success,
     ErrorTemporary,
     ErrorPermanent,
+    ErrorUserStopped,
 }
 
 fn capture_result_from_sys(result: imp_dc::CaptureResult) -> CaptureResult {
@@ -119,5 +120,6 @@ fn capture_result_from_sys(result: imp_dc::CaptureResult) -> CaptureResult {
         imp_dc::CaptureResult::Success => CaptureResult::Success,
         imp_dc::CaptureResult::ErrorTemporary => CaptureResult::ErrorTemporary,
         imp_dc::CaptureResult::ErrorPermanent => CaptureResult::ErrorPermanent,
+        imp_dc::CaptureResult::ErrorUserStopped => CaptureResult::ErrorUserStopped,
     }
 }
