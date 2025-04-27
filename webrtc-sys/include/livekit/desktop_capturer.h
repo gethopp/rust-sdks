@@ -83,6 +83,9 @@ static std::unique_ptr<DesktopCapturer> new_desktop_capturer(
 #ifdef __APPLE__
   options.set_allow_sck_capturer(true);
 #endif
+#ifdef _WIN64
+  options.set_allow_directx_capturer(true);
+#endif
   std::unique_ptr<webrtc::DesktopCapturer> capturer = nullptr;
   std::unique_ptr<webrtc::DesktopCapturer> sources_capturer = nullptr;
   if (window_capturer) {
