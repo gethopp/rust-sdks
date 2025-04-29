@@ -78,12 +78,17 @@ class DesktopFrame {
 static std::unique_ptr<DesktopCapturer> new_desktop_capturer(
     rust::Box<DesktopCapturerCallbackWrapper> callback,
     bool window_capturer) {
+  // We have a separate capturer for the sources because
+  // at the time of the implementation the screencapture kit
+  // implementation had issues.
+  // We need to fix this.
   webrtc::DesktopCaptureOptions options =
       webrtc::DesktopCaptureOptions::CreateDefault();
 #ifdef __APPLE__
   options.set_allow_sck_capturer(true);
 #endif
 #ifdef _WIN64
+  options.set_allow_wgc_screen_capturer(true);
   options.set_allow_directx_capturer(true);
 #endif
   std::unique_ptr<webrtc::DesktopCapturer> capturer = nullptr;
@@ -93,11 +98,21 @@ static std::unique_ptr<DesktopCapturer> new_desktop_capturer(
 #ifdef __APPLE__
     options.set_allow_sck_capturer(false);
 #endif
+#ifdef _WIN64
+    // Only one can wgc screen capturer can be instantiated, according to
+    // https://source.chromium.org/chromium/chromium/src/+/main:third_party/webrtc/modules/desktop_capture/win/wgc_capturer_win.h;l=80.
+    options.set_allow_wgc_screen_capturer(false);
+#endif
     sources_capturer = webrtc::DesktopCapturer::CreateWindowCapturer(options);
   } else {
     capturer = webrtc::DesktopCapturer::CreateScreenCapturer(options);
 #ifdef __APPLE__
     options.set_allow_sck_capturer(false);
+#endif
+#ifdef _WIN64
+    // Only one can wgc screen capturer can be instantiated, according to
+    // https://source.chromium.org/chromium/chromium/src/+/main:third_party/webrtc/modules/desktop_capture/win/wgc_capturer_win.h;l=80.
+    options.set_allow_wgc_screen_capturer(false);
 #endif
     sources_capturer = webrtc::DesktopCapturer::CreateScreenCapturer(options);
   }
