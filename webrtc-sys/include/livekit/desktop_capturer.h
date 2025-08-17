@@ -82,6 +82,8 @@ static std::unique_ptr<DesktopCapturer> new_desktop_capturer(
   options.set_allow_wgc_screen_capturer(true);
   options.set_allow_directx_capturer(true);
 #endif
+  options.set_allow_pipewire(true);
+
   std::unique_ptr<webrtc::DesktopCapturer> capturer = nullptr;
   if (window_capturer) {
     capturer = webrtc::DesktopCapturer::CreateWindowCapturer(options);
