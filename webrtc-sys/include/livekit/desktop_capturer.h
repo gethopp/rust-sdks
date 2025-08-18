@@ -19,12 +19,14 @@
 
 #include "modules/desktop_capture/desktop_capturer.h"
 #include "modules/desktop_capture/desktop_capture_options.h"
+#include "modules/desktop_capture/delegated_source_list_controller.h"
 #include "rust/cxx.h"
 
 namespace livekit {
 class DesktopFrame;
 class DesktopCapturer;
 class Source;
+class DesktopRect;
 }  // namespace livekit
 
 #include "webrtc-sys/src/desktop_capturer.rs.h"
@@ -44,6 +46,7 @@ class DesktopCapturer : public webrtc::DesktopCapturer::Callback {
   void start() { capturer->Start(this); };
   void capture_frame() const { capturer->CaptureFrame(); };
   void set_excluded_applications(rust::Vec<uint64_t> excluded_applications) const;
+  DesktopRect get_source_rect() const;
 
  private:
   std::unique_ptr<webrtc::DesktopCapturer> capturer;
@@ -58,9 +61,9 @@ class DesktopFrame {
 
   int32_t height() const { return frame->size().height(); }
 
-  int32_t left() const { return frame->rect().left(); }
+  int32_t left() const { return frame->top_left().x(); }
 
-  int32_t top() const { return frame->rect().top(); }
+  int32_t top() const { return frame->top_left().y(); }
 
   int32_t stride() const { return frame->stride(); }
 
@@ -82,7 +85,9 @@ static std::unique_ptr<DesktopCapturer> new_desktop_capturer(
   options.set_allow_wgc_screen_capturer(true);
   options.set_allow_directx_capturer(true);
 #endif
+#ifdef __linux__
   options.set_allow_pipewire(true);
+#endif
 
   std::unique_ptr<webrtc::DesktopCapturer> capturer = nullptr;
   if (window_capturer) {

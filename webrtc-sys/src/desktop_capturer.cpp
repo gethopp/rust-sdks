@@ -69,4 +69,18 @@ rust::Vec<Source> DesktopCapturer::get_source_list() const {
   }
   return source_list;
 }
+
+DesktopRect DesktopCapturer::get_source_rect() const {
+  DesktopRect rect{};
+
+#ifdef __linux__
+  auto metadata = capturer->GetMetadata();
+  rect.top = metadata.session_details.top;
+  rect.left = metadata.session_details.left;
+  rect.width = metadata.session_details.width;
+  rect.height = metadata.session_details.height;
+#endif
+
+  return rect;
+}
 }  // namespace livekit

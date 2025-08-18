@@ -59,6 +59,10 @@ impl DesktopCapturer {
     pub fn set_excluded_applications(&self, applications: Vec<u64>) {
         self.sys_handle.set_excluded_applications(applications);
     }
+
+    pub fn get_source_rect(&self) -> DesktopRect {
+        DesktopRect::new(self.sys_handle.get_source_rect())
+    }
 }
 
 pub struct DesktopFrame {
@@ -155,5 +159,24 @@ fn capture_result_from_sys(result: sys_dc::ffi::CaptureResult) -> CaptureResult 
         sys_dc::ffi::CaptureResult::ErrorPermanent => CaptureResult::ErrorPermanent,
         sys_dc::ffi::CaptureResult::ErrorUserStopped => CaptureResult::ErrorUserStopped,
         _ => CaptureResult::ErrorPermanent,
+    }
+}
+
+#[derive(Clone)]
+pub struct DesktopRect {
+    pub top: i32,
+    pub left: i32,
+    pub width: i32,
+    pub height: i32,
+}
+
+impl DesktopRect {
+    pub fn new(sys_handle: sys_dc::ffi::DesktopRect) -> Self {
+        Self {
+            top: sys_handle.top,
+            left: sys_handle.left,
+            width: sys_handle.width,
+            height: sys_handle.height,
+        }
     }
 }

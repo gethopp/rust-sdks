@@ -33,6 +33,14 @@ pub mod ffi {
         ErrorUserStopped,
     }
 
+    #[derive(Clone)]
+    struct DesktopRect {
+        top: i32,
+        left: i32,
+        width: i32,
+        height: i32,
+    }
+
     unsafe extern "C++" {
         include!("livekit/desktop_capturer.h");
 
@@ -48,6 +56,7 @@ pub mod ffi {
         fn select_source(self: &DesktopCapturer, id: u64) -> bool;
         fn start(self: Pin<&mut DesktopCapturer>);
         fn set_excluded_applications(self: &DesktopCapturer, applications: Vec<u64>);
+        fn get_source_rect(self: &DesktopCapturer) -> DesktopRect;
 
         fn width(self: &DesktopFrame) -> i32;
         fn height(self: &DesktopFrame) -> i32;
