@@ -19,12 +19,14 @@
 
 #include "modules/desktop_capture/desktop_capturer.h"
 #include "modules/desktop_capture/desktop_capture_options.h"
+#include "modules/desktop_capture/delegated_source_list_controller.h"
 #include "rust/cxx.h"
 
 namespace livekit {
 class DesktopFrame;
 class DesktopCapturer;
 class Source;
+class DesktopRect;
 }  // namespace livekit
 
 #include "webrtc-sys/src/desktop_capturer.rs.h"
@@ -34,8 +36,7 @@ namespace livekit {
 class DesktopCapturer : public webrtc::DesktopCapturer::Callback {
  public:
   explicit DesktopCapturer(rust::Box<DesktopCapturerCallbackWrapper> callback,
-                           std::unique_ptr<webrtc::DesktopCapturer> capturer,
-                           std::unique_ptr<webrtc::DesktopCapturer> sources_capturer);
+                           std::unique_ptr<webrtc::DesktopCapturer> capturer);
 
   void OnCaptureResult(webrtc::DesktopCapturer::Result result,
                        std::unique_ptr<webrtc::DesktopFrame> frame) final;
@@ -45,13 +46,10 @@ class DesktopCapturer : public webrtc::DesktopCapturer::Callback {
   void start() { capturer->Start(this); };
   void capture_frame() const { capturer->CaptureFrame(); };
   void set_excluded_applications(rust::Vec<uint64_t> excluded_applications) const;
+  DesktopRect get_source_rect() const;
 
  private:
   std::unique_ptr<webrtc::DesktopCapturer> capturer;
-  // TODO: This is a workaround for fetching the source list
-  // it will be removed once the SCContentSharingPicker will be
-  // integrated.
-  std::unique_ptr<webrtc::DesktopCapturer> sources_capturer;
   rust::Box<DesktopCapturerCallbackWrapper> callback;
 };
 
@@ -63,9 +61,9 @@ class DesktopFrame {
 
   int32_t height() const { return frame->size().height(); }
 
-  int32_t left() const { return frame->rect().left(); }
+  int32_t left() const { return frame->top_left().x(); }
 
-  int32_t top() const { return frame->rect().top(); }
+  int32_t top() const { return frame->top_left().y(); }
 
   int32_t stride() const { return frame->stride(); }
 
@@ -78,10 +76,6 @@ class DesktopFrame {
 static std::unique_ptr<DesktopCapturer> new_desktop_capturer(
     rust::Box<DesktopCapturerCallbackWrapper> callback,
     bool window_capturer) {
-  // We have a separate capturer for the sources because
-  // at the time of the implementation the screencapture kit
-  // implementation had issues.
-  // We need to fix this.
   webrtc::DesktopCaptureOptions options =
       webrtc::DesktopCaptureOptions::CreateDefault();
 #ifdef __APPLE__
@@ -91,37 +85,21 @@ static std::unique_ptr<DesktopCapturer> new_desktop_capturer(
   options.set_allow_wgc_screen_capturer(true);
   options.set_allow_directx_capturer(true);
 #endif
+#ifdef __linux__
+  options.set_allow_pipewire(true);
+#endif
+
   std::unique_ptr<webrtc::DesktopCapturer> capturer = nullptr;
-  std::unique_ptr<webrtc::DesktopCapturer> sources_capturer = nullptr;
   if (window_capturer) {
     capturer = webrtc::DesktopCapturer::CreateWindowCapturer(options);
-#ifdef __APPLE__
-    options.set_allow_sck_capturer(false);
-#endif
-#ifdef _WIN64
-    // Only one can wgc screen capturer can be instantiated, according to
-    // https://source.chromium.org/chromium/chromium/src/+/main:third_party/webrtc/modules/desktop_capture/win/wgc_capturer_win.h;l=80.
-    options.set_allow_wgc_screen_capturer(false);
-#endif
-    sources_capturer = webrtc::DesktopCapturer::CreateWindowCapturer(options);
   } else {
     capturer = webrtc::DesktopCapturer::CreateScreenCapturer(options);
-#ifdef __APPLE__
-    options.set_allow_sck_capturer(false);
-#endif
-#ifdef _WIN64
-    // Only one can wgc screen capturer can be instantiated, according to
-    // https://source.chromium.org/chromium/chromium/src/+/main:third_party/webrtc/modules/desktop_capture/win/wgc_capturer_win.h;l=80.
-    options.set_allow_wgc_screen_capturer(false);
-#endif
-    sources_capturer = webrtc::DesktopCapturer::CreateScreenCapturer(options);
   }
-  if (!capturer || !sources_capturer) {
+  if (!capturer) {
     return nullptr;
   }
   return std::make_unique<DesktopCapturer>(std::move(callback),
-                                           std::move(capturer),
-                                           std::move(sources_capturer));
+                                           std::move(capturer));
 }
 
 }  // namespace livekit

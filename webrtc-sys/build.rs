@@ -138,6 +138,15 @@ fn main() {
             println!("cargo:rustc-link-lib=dylib=pthread");
             println!("cargo:rustc-link-lib=dylib=m");
 
+
+            println!("cargo:rustc-link-lib=dylib=glib-2.0");
+            println!("cargo:rustc-link-lib=dylib=gobject-2.0");
+            println!("cargo:rustc-link-lib=dylib=gio-2.0");
+            println!("cargo:rustc-link-lib=dylib=drm");
+            println!("cargo:rustc-link-lib=dylib=gbm");
+
+            add_gio_headers(&mut builder);
+
             builder.flag("-std=c++2a");
         }
         "macos" => {
@@ -293,4 +302,25 @@ fn configure_android_sysroot(builder: &mut cc::Build) {
     println!("cargo:rustc-link-search={}", toolchain_lib.display());
 
     builder.flag(format!("-isysroot{}", sysroot.display()).as_str());
+}
+
+fn add_gio_headers(builder: &mut cc::Build) {
+    let headers_path = PathBuf::from("libwebrtc/debian_sysroot_headers");
+
+    let generic_path = headers_path.join("glib-2.0");
+    builder.include(&generic_path);
+
+    let target_arch = env::var("CARGO_CFG_TARGET_ARCH").unwrap_or_else(|_| "unknown".to_string());
+
+    let arch_specific_path = match target_arch.as_str() {
+        "x86_64" => headers_path.join("x86_64-linux-gnu"),
+        "aarch64" => headers_path.join("aarch64-linux-gnu"),
+        _ => panic!("unsupported target"),
+    };
+
+    if arch_specific_path.exists() && !arch_specific_path.as_os_str().is_empty() {
+        builder.include(&arch_specific_path);
+    }
+
+    println!("cargo:rerun-if-changed=libwebrtc/debian_sysroot_headers");
 }

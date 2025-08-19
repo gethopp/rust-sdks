@@ -21,11 +21,8 @@ using SourceList = webrtc::DesktopCapturer::SourceList;
 namespace livekit {
 DesktopCapturer::DesktopCapturer(
     rust::Box<DesktopCapturerCallbackWrapper> callback,
-    std::unique_ptr<webrtc::DesktopCapturer> capturer,
-    std::unique_ptr<webrtc::DesktopCapturer> sources_capturer)
-    : callback(std::move(callback)),
-      capturer(std::move(capturer)),
-      sources_capturer(std::move(sources_capturer)) {}
+    std::unique_ptr<webrtc::DesktopCapturer> capturer)
+    : callback(std::move(callback)), capturer(std::move(capturer)) {}
 
 void DesktopCapturer::OnCaptureResult(
     webrtc::DesktopCapturer::Result result,
@@ -62,7 +59,7 @@ void DesktopCapturer::set_excluded_applications(
 
 rust::Vec<Source> DesktopCapturer::get_source_list() const {
   SourceList list{};
-  bool res = sources_capturer->GetSourceList(&list);
+  bool res = capturer->GetSourceList(&list);
   rust::Vec<Source> source_list{};
   if (res) {
     for (auto& source : list) {
@@ -71,5 +68,19 @@ rust::Vec<Source> DesktopCapturer::get_source_list() const {
     }
   }
   return source_list;
+}
+
+DesktopRect DesktopCapturer::get_source_rect() const {
+  DesktopRect rect{};
+
+#ifdef __linux__
+  auto metadata = capturer->GetMetadata();
+  rect.top = metadata.session_details.top;
+  rect.left = metadata.session_details.left;
+  rect.width = metadata.session_details.width;
+  rect.height = metadata.session_details.height;
+#endif
+
+  return rect;
 }
 }  // namespace livekit

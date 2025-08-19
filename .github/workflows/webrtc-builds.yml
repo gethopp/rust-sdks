@@ -55,33 +55,6 @@ jobs:
             cmd: ./build_linux.sh
             arch: arm64
 
-          - name: android
-            os: ubuntu-latest
-            cmd: ./build_android.sh
-            arch: arm64
-
-          - name: android
-            os: ubuntu-latest
-            cmd: ./build_android.sh
-            arch: arm
-
-          - name: android
-            os: ubuntu-latest
-            cmd: ./build_android.sh
-            arch: x64
-
-          - name: ios
-            out: ios-device-arm64
-            os: macos-latest
-            cmd: ./build_ios.sh
-            arch: arm64
-
-          - name: ios
-            out: ios-simulator-arm64
-            os: macos-latest
-            cmd: ./build_ios.sh
-            arch: arm64
-            buildargs: --environment simulator
         profile:
           - release
     #          - debug

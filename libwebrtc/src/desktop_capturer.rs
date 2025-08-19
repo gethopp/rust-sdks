@@ -50,6 +50,10 @@ impl DesktopCapturer {
     pub fn set_excluded_applications(&self, applications: Vec<u64>) {
         self.handle.set_excluded_applications(applications);
     }
+
+    pub fn get_source_rect(&self) -> DesktopRect {
+        DesktopRect::new(self.handle.get_source_rect())
+    }
 }
 
 pub struct DesktopFrame {
@@ -121,5 +125,35 @@ fn capture_result_from_sys(result: imp_dc::CaptureResult) -> CaptureResult {
         imp_dc::CaptureResult::ErrorTemporary => CaptureResult::ErrorTemporary,
         imp_dc::CaptureResult::ErrorPermanent => CaptureResult::ErrorPermanent,
         imp_dc::CaptureResult::ErrorUserStopped => CaptureResult::ErrorUserStopped,
+    }
+}
+
+#[derive(Clone)]
+pub struct DesktopRect {
+    pub top: i32,
+    pub left: i32,
+    pub width: i32,
+    pub height: i32,
+}
+
+impl DesktopRect {
+    pub fn new(handle: imp_dc::DesktopRect) -> Self {
+        Self {
+            top: handle.top,
+            left: handle.left,
+            width: handle.width,
+            height: handle.height,
+        }
+    }
+}
+
+impl std::fmt::Display for DesktopRect {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DesktopRect")
+            .field("top", &self.top)
+            .field("left", &self.left)
+            .field("width", &self.width)
+            .field("height", &self.height)
+            .finish()
     }
 }
