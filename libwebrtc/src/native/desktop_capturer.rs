@@ -20,13 +20,14 @@ pub struct DesktopCapturer {
 }
 
 impl DesktopCapturer {
-    pub fn new<T>(callback: T, window_capturer: bool) -> Option<Self>
+    pub fn new<T>(callback: T, window_capturer: bool, include_cursor: bool) -> Option<Self>
     where
         T: Fn(CaptureResult, DesktopFrame) + Send + 'static,
     {
         let callback = DesktopCallback::new(callback);
         let callback_wrapper = sys_dc::DesktopCapturerCallbackWrapper::new(Box::new(callback));
-        let sys_handle = new_desktop_capturer(Box::new(callback_wrapper), window_capturer);
+        let sys_handle =
+            new_desktop_capturer(Box::new(callback_wrapper), window_capturer, include_cursor);
         if sys_handle.is_null() {
             None
         } else {

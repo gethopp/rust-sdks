@@ -75,7 +75,8 @@ class DesktopFrame {
 
 static std::unique_ptr<DesktopCapturer> new_desktop_capturer(
     rust::Box<DesktopCapturerCallbackWrapper> callback,
-    bool window_capturer) {
+    bool window_capturer,
+    bool include_cursor) {
   webrtc::DesktopCaptureOptions options =
       webrtc::DesktopCaptureOptions::CreateDefault();
 #ifdef __APPLE__
@@ -88,6 +89,8 @@ static std::unique_ptr<DesktopCapturer> new_desktop_capturer(
 #ifdef __linux__
   options.set_allow_pipewire(true);
 #endif
+
+  options.set_prefer_cursor_embedded(include_cursor);
 
   std::unique_ptr<webrtc::DesktopCapturer> capturer = nullptr;
   if (window_capturer) {

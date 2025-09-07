@@ -50,6 +50,7 @@ pub mod ffi {
         fn new_desktop_capturer(
             callback: Box<DesktopCapturerCallbackWrapper>,
             window_capturer: bool,
+            include_cursor: bool,
         ) -> UniquePtr<DesktopCapturer>;
         fn capture_frame(self: &DesktopCapturer);
         fn get_source_list(self: &DesktopCapturer) -> Vec<Source>;

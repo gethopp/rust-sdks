@@ -84,7 +84,7 @@ async fn main() {
 
         buffer_source_clone.capture_frame(&*framebuffer);
     };
-    let mut capturer = DesktopCapturer::new(callback, false);
+    let mut capturer = DesktopCapturer::new(callback, false, false);
     if capturer.is_none() {
         return;
     }

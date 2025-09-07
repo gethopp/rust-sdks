@@ -19,14 +19,15 @@ pub struct DesktopCapturer {
 }
 
 impl DesktopCapturer {
-    pub fn new<T>(callback: T, window_capturer: bool) -> Option<Self>
+    pub fn new<T>(callback: T, window_capturer: bool, include_cursor: bool) -> Option<Self>
     where
         T: Fn(CaptureResult, DesktopFrame) + Send + 'static,
     {
         let inner_callback = move |result: imp_dc::CaptureResult, frame: imp_dc::DesktopFrame| {
             callback(capture_result_from_sys(result), DesktopFrame::new(frame));
         };
-        let desktop_capturer = imp_dc::DesktopCapturer::new(inner_callback, window_capturer);
+        let desktop_capturer =
+            imp_dc::DesktopCapturer::new(inner_callback, window_capturer, include_cursor);
         if desktop_capturer.is_none() {
             return None;
         }
@@ -138,12 +139,7 @@ pub struct DesktopRect {
 
 impl DesktopRect {
     pub fn new(handle: imp_dc::DesktopRect) -> Self {
-        Self {
-            top: handle.top,
-            left: handle.left,
-            width: handle.width,
-            height: handle.height,
-        }
+        Self { top: handle.top, left: handle.left, width: handle.width, height: handle.height }
     }
 }
 
