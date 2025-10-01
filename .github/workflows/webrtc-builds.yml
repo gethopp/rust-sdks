@@ -26,12 +26,12 @@ jobs:
       matrix:
         target:
           - name: win
-            os: windows-latest
+            os: windows-2022
             cmd: .\build_windows.cmd
             arch: x64
 
           - name: win
-            os: windows-latest
+            os: windows-2022
             cmd: .\build_windows.cmd
             arch: arm64
 
