@@ -120,7 +120,7 @@ args="is_debug=$debug  \
   enable_iterator_debugging=false \
   use_rtti=true \
   is_clang=false \
-  rtc_use_x11=false"
+  rtc_use_x11=true"
 
 # generate ninja files
 gn gen "$OUTPUT_DIR" --root="src" --args="${args}"
@@ -137,6 +137,7 @@ python3 "./src/tools_webrtc/libs/generate_licenses.py" \
   --target :default "$OUTPUT_DIR" "$OUTPUT_DIR"
 
 cp "$OUTPUT_DIR/obj/webrtc.ninja" "$ARTIFACTS_DIR"
+cp "$OUTPUT_DIR/obj/modules/desktop_capture/desktop_capture.ninja" "$ARTIFACTS_DIR"
 cp "$OUTPUT_DIR/args.gn" "$ARTIFACTS_DIR"
 cp "$OUTPUT_DIR/LICENSE.md" "$ARTIFACTS_DIR"
 
