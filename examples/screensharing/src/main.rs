@@ -11,6 +11,7 @@ use livekit::webrtc::prelude::{
 };
 use livekit::webrtc::video_source::native::NativeVideoSource;
 use livekit_api::access_token;
+use std::collections::HashMap;
 use std::env;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -152,7 +153,21 @@ async fn main() {
     let mut capturer =
         DesktopCapturer::new(callback, options).expect("Failed to create desktop capturer");
     let sources = capturer.get_source_list();
-    log::info!("Found {} sources", sources.len());
+    let selected_source = if sources.len() == 0 {
+        None
+    // On Wayland, the XDG Desktop Portal presents a UI for the user
+    // to select the source and libwebrtc only returns that one source,
+    // so do not present a redundant UI here.
+    } else if sources.len() == 1 {
+        Some(sources.first().unwrap().clone())
+    } else {
+        let options: Vec<_> = sources.clone().into_iter().map(|s| s.to_string()).collect();
+        let map: HashMap<_, _> = sources.into_iter().map(|s| (s.to_string(), s)).collect();
+        match inquire::Select::new("Select desktop capture source:", options).prompt() {
+            Ok(s) => Some(map.get(&s).unwrap().clone()),
+            Err(e) => panic!("{e:?}"),
+        }
+    };
 
     let selected_source = sources.first().cloned();
     capturer.start_capture(selected_source);
