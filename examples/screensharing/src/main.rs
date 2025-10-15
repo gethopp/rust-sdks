@@ -12,6 +12,7 @@ use livekit::webrtc::prelude::{
 use livekit::webrtc::video_source::native::NativeVideoSource;
 use livekit_api::access_token;
 use std::env;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::sync::Mutex;
 
@@ -158,9 +159,20 @@ async fn main() {
     let selected_source = sources.first().cloned();
     capturer.start_capture(selected_source);
 
-    let now = tokio::time::Instant::now();
-    while now.elapsed() < tokio::time::Duration::from_secs(30) {
+    let ctrl_c_received = Arc::new(AtomicBool::new(false));
+    tokio::spawn({
+        let ctrl_c_received = ctrl_c_received.clone();
+        async move {
+            tokio::signal::ctrl_c().await.unwrap();
+            ctrl_c_received.store(true, Ordering::Release);
+        }
+    });
+
+    loop {
         capturer.capture_frame();
+        if ctrl_c_received.load(Ordering::Acquire) == true {
+            break;
+        }
         tokio::time::sleep(tokio::time::Duration::from_millis(16)).await;
     }
 }
