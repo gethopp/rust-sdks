@@ -146,12 +146,6 @@ async fn main() {
     }
     options.set_window_capturer(args.capture_window);
     options.set_include_cursor(args.capture_cursor);
-    #[cfg(target_os = "linux")]
-    {
-        if std::env::var("WAYLAND_DISPLAY").is_ok() {
-            options.set_pipewire_capturer(true);
-        }
-    }
 
     let mut capturer =
         DesktopCapturer::new(callback, options).expect("Failed to create desktop capturer");

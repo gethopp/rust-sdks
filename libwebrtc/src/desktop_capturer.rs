@@ -81,14 +81,6 @@ impl DesktopCapturerOptions {
     pub fn set_directx_capturer(&mut self, allow_directx_capturer: bool) {
         self.sys_handle = self.sys_handle.with_directx_capturer(allow_directx_capturer);
     }
-
-    /// Sets whether to allow the PipeWire capturer on Linux.
-    ///
-    /// It should be enabled when using Wayland.
-    #[cfg(target_os = "linux")]
-    pub fn set_pipewire_capturer(&mut self, allow_pipewire_capturer: bool) {
-        self.sys_handle = self.sys_handle.with_pipewire_capturer(allow_pipewire_capturer);
-    }
 }
 
 /// A desktop capturer for capturing screens or windows.

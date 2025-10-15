@@ -39,8 +39,8 @@ std::unique_ptr<DesktopCapturer> new_desktop_capturer(
   }
   webrtc_options.set_allow_directx_capturer(options.allow_directx_capturer);
 #endif
-#ifdef __linux__
-  webrtc_options.set_allow_pipewire(options.allow_pipewire_capturer);
+#ifdef WEBRTC_USE_PIPEWIRE
+  webrtc_options.set_allow_pipewire(true);
 #endif
 
   webrtc_options.set_prefer_cursor_embedded(options.include_cursor);
