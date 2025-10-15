@@ -155,22 +155,27 @@ fn main() {
             println!("cargo:rustc-link-lib=dylib=pthread");
             println!("cargo:rustc-link-lib=dylib=m");
 
-            if std::env::var("LK_CUSTOM_WEBRTC").is_ok() {
-                for lib_name in ["glib-2.0", "gobject-2.0", "gio-2.0"] {
-                    let lib = pkg_config::probe_library(lib_name).unwrap();
-                    builder.includes(lib.include_paths);
+            for lib_name in [
+                "glib-2.0",
+                "gobject-2.0",
+                "gio-2.0",
+                "libdrm",
+                "gbm",
+                "x11",
+                "xfixes",
+                "xdamage",
+                "xrandr",
+                "xcomposite",
+                "xext",
+            ] {
+                let lib = pkg_config::probe_library(lib_name).unwrap();
+                if lib_name == "gio-2.0" {
+                    if std::env::var("LK_CUSTOM_WEBRTC").is_ok() {
+                        builder.includes(lib.include_paths);
+                    } else {
+                        add_gio_headers(&mut builder);
+                    }
                 }
-            } else {
-                println!("cargo:rustc-link-lib=dylib=glib-2.0");
-                println!("cargo:rustc-link-lib=dylib=gobject-2.0");
-                println!("cargo:rustc-link-lib=dylib=gio-2.0");
-                add_gio_headers(&mut builder);
-            }
-
-            for lib_name in
-                ["libdrm", "gbm", "x11", "xfixes", "xdamage", "xrandr", "xcomposite", "xext"]
-            {
-                pkg_config::probe_library(lib_name).unwrap();
             }
 
             match target_arch.as_str() {
