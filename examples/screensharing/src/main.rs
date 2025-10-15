@@ -42,18 +42,6 @@ async fn main() {
         .init();
     let args = Args::parse();
 
-    // On Wayland, libwebrtc communicates with the XDG Desktop Portal over dbus using GDBus
-    // from the gio library. This requires a running glib event loop to work.
-    // If your application already has a glib event loop running for another reason, for
-    // example using the GTK or GStreamer Rust bindings, you do not need to setup another
-    // glib event loop for this.
-    if cfg!(target_os = "linux") && std::env::var("WAYLAND_DISPLAY").is_ok() {
-        let main_loop = glib::MainLoop::new(None, false);
-        let _handle = std::thread::spawn(move || {
-            main_loop.run();
-        });
-    }
-
     let url = env::var("LIVEKIT_URL").expect("LIVEKIT_URL is not set");
     let api_key = env::var("LIVEKIT_API_KEY").expect("LIVEKIT_API_KEY is not set");
     let api_secret = env::var("LIVEKIT_API_SECRET").expect("LIVEKIT_API_SECRET is not set");

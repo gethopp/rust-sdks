@@ -145,6 +145,13 @@ impl DesktopCapturer {
     }
 
     pub fn start(&mut self) {
+        #[cfg(all(target_os = "linux", feature = "glib-main-loop"))]
+        if std::env::var("WAYLAND_DISPLAY").is_ok() {
+            let main_loop = glib::MainLoop::new(None, false);
+            let _handle = std::thread::spawn(move || {
+                main_loop.run();
+            });
+        }
         let pin_handle = self.sys_handle.pin_mut();
         pin_handle.start();
     }

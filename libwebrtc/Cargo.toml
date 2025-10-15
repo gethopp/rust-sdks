@@ -7,12 +7,24 @@ license = "Apache-2.0"
 description = "Livekit safe bindings to libwebrtc"
 repository = "https://github.com/livekit/rust-sdks"
 
+[features]
+default = [ "glib-main-loop" ]
+# On Wayland, libwebrtc communicates with the XDG Desktop Portal over dbus using GDBus
+# from the gio library. This requires a running glib event loop to work.
+# If your application already has a glib event loop running for another reason, for
+# example using the GTK or GStreamer Rust bindings, it does not need to setup another
+# glib event loop for this and can opt out by disabling this default glib-main-loop feature.
+glib-main-loop = [ "dep:glib" ]
+
 [dependencies]
 livekit-protocol = { workspace = true }
 log = "0.4"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 thiserror = "1.0"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+glib = { version = "0.21.3", optional = true }
 
 [target.'cfg(target_os = "android")'.dependencies]
 jni = "0.21"
