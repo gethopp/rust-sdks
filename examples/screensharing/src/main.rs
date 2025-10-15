@@ -36,7 +36,10 @@ struct Args {
 
 #[tokio::main]
 async fn main() {
-    env_logger::init();
+    env_logger::builder()
+        .filter(Some(env!("CARGO_CRATE_NAME")), log::LevelFilter::Info)
+        .parse_default_env()
+        .init();
     let args = Args::parse();
 
     #[cfg(target_os = "linux")]
@@ -172,7 +175,7 @@ async fn main() {
         }
     };
 
-    let selected_source = sources.first().cloned();
+    log::info!("Starting desktop capture. Press Ctrl + C to quit.");
     capturer.start_capture(selected_source);
 
     let ctrl_c_received = Arc::new(AtomicBool::new(false));
@@ -187,6 +190,7 @@ async fn main() {
     loop {
         capturer.capture_frame();
         if ctrl_c_received.load(Ordering::Acquire) == true {
+            log::info!("Ctrl + C received, stopping desktop capture.");
             break;
         }
         tokio::time::sleep(tokio::time::Duration::from_millis(16)).await;
