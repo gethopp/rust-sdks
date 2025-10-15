@@ -16,8 +16,14 @@ use cxx::UniquePtr;
 use webrtc_sys::desktop_capturer::{self as sys_dc, ffi::new_desktop_capturer};
 
 #[derive(Copy, Clone, Debug)]
+pub enum CaptureSourceType {
+    Screen,
+    Window,
+}
+
+#[derive(Copy, Clone, Debug)]
 pub struct DesktopCapturerOptions {
-    pub window_capturer: bool,
+    pub capture_source_type: CaptureSourceType,
     pub include_cursor: bool,
     #[cfg(target_os = "macos")]
     pub allow_sck_capturer: bool,
@@ -32,7 +38,7 @@ pub struct DesktopCapturerOptions {
 impl Default for DesktopCapturerOptions {
     fn default() -> Self {
         Self {
-            window_capturer: false,
+            capture_source_type: CaptureSourceType::Screen,
             include_cursor: false,
             #[cfg(target_os = "macos")]
             allow_sck_capturer: true,
@@ -48,7 +54,11 @@ impl Default for DesktopCapturerOptions {
 
 impl DesktopCapturerOptions {
     pub(crate) fn new() -> Self {
-        Self { window_capturer: false, include_cursor: false, ..Default::default() }
+        Self {
+            capture_source_type: CaptureSourceType::Screen,
+            include_cursor: false,
+            ..Default::default()
+        }
     }
 
     pub(crate) fn with_cursor(mut self, include: bool) -> Self {
@@ -56,8 +66,8 @@ impl DesktopCapturerOptions {
         self
     }
 
-    pub(crate) fn with_window_capturer(mut self, window_capturer: bool) -> Self {
-        self.window_capturer = window_capturer;
+    pub(crate) fn with_capture_source_type(mut self, t: CaptureSourceType) -> Self {
+        self.capture_source_type = t;
         self
     }
 
@@ -87,7 +97,10 @@ impl DesktopCapturerOptions {
 
     pub(crate) fn to_sys_handle(&self) -> sys_dc::ffi::DesktopCapturerOptions {
         let mut sys_handle = sys_dc::ffi::DesktopCapturerOptions {
-            window_capturer: self.window_capturer,
+            window_capturer: match self.capture_source_type {
+                CaptureSourceType::Screen => false,
+                CaptureSourceType::Window => true,
+            },
             include_cursor: self.include_cursor,
             allow_sck_capturer: false,
             allow_sck_system_picker: false,

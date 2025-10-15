@@ -3,7 +3,7 @@ use livekit::options::{TrackPublishOptions, VideoCodec};
 use livekit::prelude::*;
 use livekit::track::{LocalTrack, LocalVideoTrack, TrackSource};
 use livekit::webrtc::desktop_capturer::{
-    CaptureResult, DesktopCapturer, DesktopCapturerOptions, DesktopFrame,
+    CaptureResult, CaptureSourceType, DesktopCapturer, DesktopCapturerOptions, DesktopFrame,
 };
 use livekit::webrtc::native::yuv_helper;
 use livekit::webrtc::prelude::{
@@ -150,7 +150,11 @@ async fn main() {
     {
         options.set_sck_system_picker(args.use_system_picker);
     }
-    options.set_window_capturer(args.capture_window);
+    options.set_capture_source_type(if args.capture_window {
+        CaptureSourceType::Window
+    } else {
+        CaptureSourceType::Screen
+    });
     options.set_include_cursor(args.capture_cursor);
 
     let mut capturer =

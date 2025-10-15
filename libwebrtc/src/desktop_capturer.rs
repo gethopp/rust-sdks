@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use crate::imp::desktop_capturer as imp_dc;
+pub use imp_dc::CaptureSourceType;
 
 /// Configuration options for creating a desktop capturer.
 ///
@@ -43,8 +44,8 @@ impl DesktopCapturerOptions {
     }
 
     /// Sets whether to capture windows instead of the entire screen.
-    pub fn set_window_capturer(&mut self, window_capturer: bool) {
-        self.sys_handle = self.sys_handle.with_window_capturer(window_capturer);
+    pub fn set_capture_source_type(&mut self, t: CaptureSourceType) {
+        self.sys_handle = self.sys_handle.with_capture_source_type(t);
     }
 
     /// Sets whether to allow the ScreenCaptureKit (SCK) capturer on macOS.
