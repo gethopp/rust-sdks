@@ -38,11 +38,13 @@ async fn main() {
     env_logger::init();
     let args = Args::parse();
 
-    #[cfg(target_os = "linux")]
-    {
-        /* This is needed for getting the system picker for screen sharing. */
-        use glib::MainLoop;
-        let main_loop = MainLoop::new(None, false);
+    // On Wayland, libwebrtc communicates with the XDG Desktop Portal over dbus using GDBus
+    // from the gio library. This requires a running glib event loop to work.
+    // If your application already has a glib event loop running for another reason, for
+    // example using the GTK or GStreamer Rust bindings, you do not need to setup another
+    // glib event loop for this.
+    if cfg!(target_os = "linux") && std::env::var("WAYLAND_DISPLAY").is_ok() {
+        let main_loop = glib::MainLoop::new(None, false);
         let _handle = std::thread::spawn(move || {
             main_loop.run();
         });
