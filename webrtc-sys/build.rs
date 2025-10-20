@@ -170,11 +170,7 @@ fn main() {
             ] {
                 let lib = pkg_config::probe_library(lib_name).unwrap();
                 if lib_name == "gio-2.0" {
-                    if std::env::var("LK_CUSTOM_WEBRTC").is_ok() {
-                        builder.includes(lib.include_paths);
-                    } else {
-                        add_gio_headers(&mut builder);
-                    }
+                    builder.includes(lib.include_paths);
                 }
             }
 
@@ -372,30 +368,4 @@ fn configure_android_sysroot(builder: &mut cc::Build) {
     println!("cargo:rustc-link-search={}", toolchain_lib.display());
 
     builder.flag(format!("-isysroot{}", sysroot.display()).as_str());
-}
-
-fn add_gio_headers(builder: &mut cc::Build) {
-    let webrtc_dir = webrtc_sys_build::webrtc_dir();
-    let target_arch = webrtc_sys_build::target_arch();
-    let target_arch_sysroot = match target_arch.as_str() {
-        "arm64" => "arm64",
-        "x64" => "amd64",
-        _ => panic!("unsupported arch"),
-    };
-    let sysroot_path = format!("include/build/linux/debian_bullseye_{target_arch_sysroot}-sysroot");
-    let sysroot = webrtc_dir.join(sysroot_path);
-    let glib_path = sysroot.join("usr/include/glib-2.0");
-    println!("cargo:info=add_gio_headers {}", glib_path.display());
-
-    builder.include(&glib_path);
-    let arch_specific_path = match target_arch.as_str() {
-        "x64" => "x86_64-linux-gnu",
-        "arm64" => "aarch64-linux-gnu",
-        _ => panic!("unsupported target"),
-    };
-
-    let glib_path_config = sysroot.join("usr/lib");
-    let glib_path_config = glib_path_config.join(arch_specific_path);
-    let glib_path_config = glib_path_config.join("glib-2.0/include");
-    builder.include(&glib_path_config);
 }
