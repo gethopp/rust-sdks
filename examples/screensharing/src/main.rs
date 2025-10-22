@@ -11,7 +11,9 @@ use livekit::webrtc::prelude::{
 };
 use livekit::webrtc::video_source::native::NativeVideoSource;
 use livekit_api::access_token;
+use std::collections::HashMap;
 use std::env;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::sync::Mutex;
 
@@ -34,7 +36,10 @@ struct Args {
 
 #[tokio::main]
 async fn main() {
-    env_logger::init();
+    env_logger::builder()
+        .filter(Some(env!("CARGO_CRATE_NAME")), log::LevelFilter::Info)
+        .parse_default_env()
+        .init();
     let args = Args::parse();
 
     #[cfg(target_os = "linux")]
@@ -108,6 +113,7 @@ async fn main() {
         let video_frame = video_frame.clone();
         let height = frame.height();
         let width = frame.width();
+        log::debug!("width: {width} ; height: {height}");
 
         {
             let mut capture_buffer = capture_buffer.lock().unwrap();
@@ -153,14 +159,40 @@ async fn main() {
     let mut capturer =
         DesktopCapturer::new(callback, options).expect("Failed to create desktop capturer");
     let sources = capturer.get_source_list();
-    log::info!("Found {} sources", sources.len());
+    let selected_source = if sources.len() == 0 {
+        None
+    // On Wayland, the XDG Desktop Portal presents a UI for the user
+    // to select the source and libwebrtc only returns that one source,
+    // so do not present a redundant UI here.
+    } else if sources.len() == 1 {
+        Some(sources.first().unwrap().clone())
+    } else {
+        let options: Vec<_> = sources.clone().into_iter().map(|s| s.to_string()).collect();
+        let map: HashMap<_, _> = sources.clone().into_iter().map(|s| (s.to_string(), s)).collect();
+        match inquire::Select::new("Select desktop capture source:", options).prompt() {
+            Ok(s) => Some(map.get(&s).unwrap().clone()),
+            Err(e) => panic!("{e:?}"),
+        }
+    };
 
-    let selected_source = sources.first().cloned();
+    log::info!("Starting desktop capture. Press Ctrl + C to quit.");
     capturer.start_capture(selected_source);
 
-    let now = tokio::time::Instant::now();
-    while now.elapsed() < tokio::time::Duration::from_secs(30) {
+    let ctrl_c_received = Arc::new(AtomicBool::new(false));
+    tokio::spawn({
+        let ctrl_c_received = ctrl_c_received.clone();
+        async move {
+            tokio::signal::ctrl_c().await.unwrap();
+            ctrl_c_received.store(true, Ordering::Release);
+        }
+    });
+
+    loop {
         capturer.capture_frame();
+        if ctrl_c_received.load(Ordering::Acquire) == true {
+            log::info!("Ctrl + C received, stopping desktop capture.");
+            break;
+        }
         tokio::time::sleep(tokio::time::Duration::from_millis(16)).await;
     }
 }
