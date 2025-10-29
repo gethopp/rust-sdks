@@ -7,15 +7,19 @@ use livekit::webrtc::desktop_capturer::{
 };
 use livekit::webrtc::native::yuv_helper;
 use livekit::webrtc::prelude::{
-    I420Buffer, RtcVideoSource, VideoBuffer, VideoFrame, VideoResolution, VideoRotation,
+    I420Buffer, RtcVideoSource, VideoFrame, VideoResolution, VideoRotation,
 };
 use livekit::webrtc::video_source::native::NativeVideoSource;
 use livekit_api::access_token;
 use std::collections::HashMap;
 use std::env;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
-use std::sync::Mutex;
+use std::future::Future;
+use std::pin::pin;
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
+use std::task::{Context, Waker};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -70,79 +74,85 @@ async fn main() {
     let (room, _) = Room::connect(&url, &token, RoomOptions::default()).await.unwrap();
     log::info!("Connected to room: {} - {}", room.name(), String::from(room.sid().await));
 
-    let stream_width = 1920;
-    let stream_height = 1080;
-    let buffer_source =
-        NativeVideoSource::new(VideoResolution { width: stream_width, height: stream_height });
-    let track = LocalVideoTrack::create_video_track(
-        "screen_share",
-        RtcVideoSource::Native(buffer_source.clone()),
-    );
+    let (video_source_sender, mut video_source_receiver) = tokio::sync::mpsc::channel(1);
 
-    room.local_participant()
-        .publish_track(
-            LocalTrack::Video(track),
-            TrackPublishOptions {
-                source: TrackSource::Screenshare,
-                video_codec: VideoCodec::VP9,
-                ..Default::default()
-            },
-        )
-        .await
-        .unwrap();
+    let callback = {
+        // These dimensions are arbitrary initial values.
+        // libwebrtc only exposes the resolution of the source in the DesktopFrame
+        // passed to the callback, so wait to publish the video track until
+        // the callback is called the first time.
+        let mut stream_width = 1920;
+        let mut stream_height = 1080;
 
-    let buffer_source_clone = buffer_source.clone();
-    let video_frame = Arc::new(Mutex::new(VideoFrame {
-        rotation: VideoRotation::VideoRotation0,
-        buffer: I420Buffer::new(stream_width, stream_height),
-        timestamp_us: 0,
-    }));
-    let capture_buffer = Arc::new(Mutex::new(I420Buffer::new(stream_width, stream_height)));
-    let callback = move |result: CaptureResult, frame: DesktopFrame| {
-        match result {
-            CaptureResult::ErrorTemporary => {
-                log::debug!("Error temporary");
-                return;
+        let mut video_frame = VideoFrame {
+            rotation: VideoRotation::VideoRotation0,
+            buffer: I420Buffer::new(stream_width, stream_height),
+            timestamp_us: 0,
+        };
+        let mut video_source: Option<NativeVideoSource> = None;
+        move |result: CaptureResult, frame: DesktopFrame| {
+            match result {
+                CaptureResult::ErrorTemporary => {
+                    log::debug!("Error temporary");
+                    return;
+                }
+                CaptureResult::ErrorPermanent => {
+                    log::debug!("Error permanent");
+                    return;
+                }
+                _ => {}
             }
-            CaptureResult::ErrorPermanent => {
-                log::debug!("Error permanent");
-                return;
+            let height = frame.height().try_into().unwrap();
+            let width = frame.width().try_into().unwrap();
+
+            if width != stream_width || height != stream_height {
+                stream_width = width;
+                stream_height = height;
+                video_frame.buffer = I420Buffer::new(width, height);
             }
-            _ => {}
+
+            let stride = frame.stride();
+            let data = frame.data();
+
+            let (s_y, s_u, s_v) = video_frame.buffer.strides();
+            let (y, u, v) = video_frame.buffer.data_mut();
+            yuv_helper::argb_to_i420(
+                data,
+                stride,
+                y,
+                s_y,
+                u,
+                s_u,
+                v,
+                s_v,
+                frame.width(),
+                frame.height(),
+            );
+
+            if let Some(video_source) = &video_source {
+                video_source.capture_frame(&video_frame);
+            } else {
+                // This is the first time the callback has been called.
+                // Use the resolution from the DesktopFrame to create a video source
+                // and push it over a channel to be published from the Tokio context.
+                let video_source_inner = NativeVideoSource::new(VideoResolution {
+                    width: stream_width,
+                    height: stream_height,
+                });
+
+                // This callback is synchronous, however, it gets called via
+                // `capturer.capture_frame()` from the Tokio context. Thus, calling
+                // the channel sender's send_blocking method panics. To work around this,
+                // use the async send method and manually poll the future once, which is
+                // all that is needed.
+                let future = pin!(video_source_sender.send(video_source_inner.clone()));
+                let waker = Waker::noop();
+                let mut context = Context::from_waker(waker);
+                let _ = future.poll(&mut context);
+
+                video_source = Some(video_source_inner);
+            }
         }
-        let video_frame = video_frame.clone();
-        let height = frame.height();
-        let width = frame.width();
-        log::debug!("width: {width} ; height: {height}");
-
-        {
-            let mut capture_buffer = capture_buffer.lock().unwrap();
-            let capture_buffer_width = capture_buffer.width() as i32;
-            let capture_buffer_height = capture_buffer.height() as i32;
-            if height != capture_buffer_height || width != capture_buffer_width {
-                *capture_buffer = I420Buffer::new(width as u32, height as u32);
-            }
-        }
-
-        let stride = frame.stride();
-        let data = frame.data();
-
-        let mut capture_buffer = capture_buffer.lock().unwrap();
-        let (s_y, s_u, s_v) = capture_buffer.strides();
-        let (y, u, v) = capture_buffer.data_mut();
-        yuv_helper::argb_to_i420(data, stride, y, s_y, u, s_u, v, s_v, width, height);
-
-        let scaled_buffer = capture_buffer.scale(stream_width as i32, stream_height as i32);
-        let (scaled_y, scaled_u, scaled_v) = scaled_buffer.data();
-
-        let mut framebuffer = video_frame.lock().unwrap();
-        let buffer = &mut framebuffer.buffer;
-        let (y, u, v) = buffer.data_mut();
-        y.copy_from_slice(scaled_y);
-        u.copy_from_slice(scaled_u);
-        v.copy_from_slice(scaled_v);
-
-        buffer_source_clone.capture_frame(&*framebuffer);
     };
     let source_type = if args.capture_window {
         DesktopCaptureSourceType::WINDOW
@@ -188,11 +198,31 @@ async fn main() {
     });
 
     loop {
-        capturer.capture_frame();
         if ctrl_c_received.load(Ordering::Acquire) == true {
             log::info!("Ctrl + C received, stopping desktop capture.");
             break;
         }
+
+        capturer.capture_frame();
+        if let Ok(video_source) = video_source_receiver.try_recv() {
+            let track = LocalVideoTrack::create_video_track(
+                "screen_share",
+                RtcVideoSource::Native(video_source),
+            );
+
+            room.local_participant()
+                .publish_track(
+                    LocalTrack::Video(track),
+                    TrackPublishOptions {
+                        source: TrackSource::Screenshare,
+                        video_codec: VideoCodec::VP9,
+                        ..Default::default()
+                    },
+                )
+                .await
+                .unwrap();
+        }
+
         tokio::time::sleep(tokio::time::Duration::from_millis(16)).await;
     }
 }
