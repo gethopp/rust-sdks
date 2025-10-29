@@ -76,7 +76,7 @@ pub struct DesktopCapturer {
 impl DesktopCapturer {
     pub fn new<T>(callback: T, options: DesktopCapturerOptions) -> Option<Self>
     where
-        T: Fn(CaptureResult, DesktopFrame) + Send + 'static,
+        T: FnMut(CaptureResult, DesktopFrame) + Send + 'static,
     {
         let callback = DesktopCallback::new(callback);
         let callback_wrapper = sys_dc::DesktopCapturerCallbackWrapper::new(Box::new(callback));
@@ -146,13 +146,13 @@ impl DesktopFrame {
     }
 }
 
-pub struct DesktopCallback<T: Fn(CaptureResult, DesktopFrame) + Send> {
+pub struct DesktopCallback<T: FnMut(CaptureResult, DesktopFrame) + Send> {
     callback: T,
 }
 
 impl<T> DesktopCallback<T>
 where
-    T: Fn(CaptureResult, DesktopFrame) + Send,
+    T: FnMut(CaptureResult, DesktopFrame) + Send,
 {
     pub fn new(callback: T) -> Self {
         Self { callback }
@@ -161,10 +161,10 @@ where
 
 impl<T> sys_dc::DesktopCapturerCallback for DesktopCallback<T>
 where
-    T: Fn(CaptureResult, DesktopFrame) + Send,
+    T: FnMut(CaptureResult, DesktopFrame) + Send,
 {
     fn on_capture_result(
-        &self,
+        &mut self,
         result: sys_dc::ffi::CaptureResult,
         frame: UniquePtr<sys_dc::ffi::DesktopFrame>,
     ) {

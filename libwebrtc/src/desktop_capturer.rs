@@ -93,9 +93,9 @@ impl DesktopCapturer {
     ///
     /// Returns `Some(DesktopCapturer)` if the capturer was created successfully,
     /// or `None` if creation failed (e.g., due to platform limitations or permissions).
-    pub fn new<T>(callback: T, options: DesktopCapturerOptions) -> Option<Self>
+    pub fn new<T>(mut callback: T, options: DesktopCapturerOptions) -> Option<Self>
     where
-        T: Fn(CaptureResult, DesktopFrame) + Send + 'static,
+        T: FnMut(CaptureResult, DesktopFrame) + Send + 'static,
     {
         let inner_callback = move |result: imp_dc::CaptureResult, frame: imp_dc::DesktopFrame| {
             callback(capture_result_from_sys(result), DesktopFrame::new(frame));

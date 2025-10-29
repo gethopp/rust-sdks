@@ -66,7 +66,7 @@ pub mod ffi {
         type DesktopCapturerCallbackWrapper;
 
         fn on_capture_result(
-            self: &DesktopCapturerCallbackWrapper,
+            self: &mut DesktopCapturerCallbackWrapper,
             result: CaptureResult,
             frame: UniquePtr<DesktopFrame>,
         );
@@ -76,7 +76,7 @@ pub mod ffi {
 impl_thread_safety!(ffi::DesktopCapturer, Send + Sync);
 
 pub trait DesktopCapturerCallback: Send {
-    fn on_capture_result(&self, result: CaptureResult, frame: UniquePtr<DesktopFrame>);
+    fn on_capture_result(&mut self, result: CaptureResult, frame: UniquePtr<DesktopFrame>);
 }
 
 pub struct DesktopCapturerCallbackWrapper {
@@ -88,7 +88,7 @@ impl DesktopCapturerCallbackWrapper {
         Self { callback }
     }
 
-    fn on_capture_result(&self, result: CaptureResult, frame: UniquePtr<DesktopFrame>) {
+    fn on_capture_result(&mut self, result: CaptureResult, frame: UniquePtr<DesktopFrame>) {
         self.callback.on_capture_result(result, frame);
     }
 }
