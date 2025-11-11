@@ -13,11 +13,14 @@
 // limitations under the License.
 
 use cxx::UniquePtr;
-use webrtc_sys::desktop_capturer::{self as sys_dc, ffi::new_desktop_capturer};
+use webrtc_sys::desktop_capturer::{
+    self as sys_dc,
+    ffi::{new_desktop_capturer, DesktopCaptureSourceType},
+};
 
 #[derive(Copy, Clone, Debug)]
 pub struct DesktopCapturerOptions {
-    pub window_capturer: bool,
+    pub source_type: DesktopCaptureSourceType,
     pub include_cursor: bool,
     #[cfg(target_os = "macos")]
     pub allow_sck_system_picker: bool,
@@ -26,7 +29,7 @@ pub struct DesktopCapturerOptions {
 impl Default for DesktopCapturerOptions {
     fn default() -> Self {
         Self {
-            window_capturer: false,
+            source_type: DesktopCaptureSourceType::default(),
             include_cursor: false,
             #[cfg(target_os = "macos")]
             allow_sck_system_picker: true,
@@ -36,16 +39,16 @@ impl Default for DesktopCapturerOptions {
 
 impl DesktopCapturerOptions {
     pub(crate) fn new() -> Self {
-        Self { window_capturer: false, include_cursor: false, ..Default::default() }
+        Self { include_cursor: false, ..Default::default() }
+    }
+
+    pub(crate) fn with_source_type(mut self, source_type: DesktopCaptureSourceType) -> Self {
+        self.source_type = source_type;
+        self
     }
 
     pub(crate) fn with_cursor(mut self, include: bool) -> Self {
         self.include_cursor = include;
-        self
-    }
-
-    pub(crate) fn with_window_capturer(mut self, window_capturer: bool) -> Self {
-        self.window_capturer = window_capturer;
         self
     }
 
@@ -57,7 +60,7 @@ impl DesktopCapturerOptions {
 
     pub(crate) fn to_sys_handle(&self) -> sys_dc::ffi::DesktopCapturerOptions {
         let mut sys_handle = sys_dc::ffi::DesktopCapturerOptions {
-            window_capturer: self.window_capturer,
+            source_type: self.source_type,
             include_cursor: self.include_cursor,
             allow_sck_system_picker: false,
         };

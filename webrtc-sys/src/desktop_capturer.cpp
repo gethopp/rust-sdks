@@ -46,10 +46,16 @@ std::unique_ptr<DesktopCapturer> new_desktop_capturer(
   webrtc_options.set_prefer_cursor_embedded(options.include_cursor);
 
   std::unique_ptr<webrtc::DesktopCapturer> capturer = nullptr;
-  if (options.window_capturer) {
-    capturer = webrtc::DesktopCapturer::CreateWindowCapturer(webrtc_options);
-  } else {
-    capturer = webrtc::DesktopCapturer::CreateScreenCapturer(webrtc_options);
+  switch (options.source_type) {
+    case DesktopCaptureSourceType::Screen:
+        capturer = webrtc::DesktopCapturer::CreateScreenCapturer(webrtc_options);
+        break;
+    case DesktopCaptureSourceType::Window:
+        capturer = webrtc::DesktopCapturer::CreateWindowCapturer(webrtc_options);
+        break;
+    case DesktopCaptureSourceType::ScreenOrWindow:
+        capturer = webrtc::DesktopCapturer::CreateGenericCapturer(webrtc_options);
+        break;
   }
   if (!capturer) {
     return nullptr;

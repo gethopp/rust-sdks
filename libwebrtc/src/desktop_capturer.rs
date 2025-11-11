@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use crate::imp::desktop_capturer as imp_dc;
+pub use webrtc_sys::desktop_capturer::ffi::DesktopCaptureSourceType;
 
 /// Configuration options for creating a desktop capturer.
 ///
@@ -24,37 +25,28 @@ use crate::imp::desktop_capturer as imp_dc;
 /// ```no_run
 /// use libwebrtc::desktop_capturer::{DesktopCapturerOptions, DesktopCaptureSourceType};
 ///
-/// let mut options = DesktopCapturerOptions::new(DesktopCaptureSourceType::SCREEN);
+/// let mut options = DesktopCapturerOptions::new();
 /// options.set_include_cursor(true);
 /// ```
 pub struct DesktopCapturerOptions {
     pub(crate) sys_handle: imp_dc::DesktopCapturerOptions,
 }
 
-/// Specifies the type of source that a desktop capturer should capture.
-#[derive(Debug, PartialEq)]
-pub enum DesktopCaptureSourceType {
-    SCREEN,
-    WINDOW,
-}
-
 impl DesktopCapturerOptions {
     /// Creates a new `DesktopCapturerOptions` with default values.
     ///
-    /// # Arguments
-    ///
-    /// * `source_type` - The type of source to capture (screen or window).
-    ///
     /// # Defaults
     ///
+    /// - Capture screens (use [`set_source_type`](Self::set_source_type) to capture windows)
     /// - Cursor is not included in captured frames (use [`set_include_cursor`](Self::set_include_cursor) to change)
     /// - On macOS, the ScreenCaptureKit system picker is enabled (use [`set_sck_system_picker`](Self::set_sck_system_picker) to change)
-    pub fn new(source_type: DesktopCaptureSourceType) -> Self {
-        let mut sys_handle = imp_dc::DesktopCapturerOptions::new();
-        if source_type == DesktopCaptureSourceType::WINDOW {
-            sys_handle = sys_handle.with_window_capturer(true);
-        }
+    pub fn new() -> Self {
+        let sys_handle = imp_dc::DesktopCapturerOptions::new();
         Self { sys_handle }
+    }
+
+    pub fn set_source_type(&mut self, source_type: DesktopCaptureSourceType) {
+        self.sys_handle = self.sys_handle.with_source_type(source_type);
     }
 
     /// Sets whether to include the cursor in captured frames.

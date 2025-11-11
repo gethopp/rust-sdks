@@ -16,6 +16,7 @@ use cxx::UniquePtr;
 use ffi::CaptureResult;
 
 use crate::{desktop_capturer::ffi::DesktopFrame, impl_thread_safety};
+pub use ffi::DesktopCaptureSourceType;
 
 #[cxx::bridge(namespace = "livekit")]
 pub mod ffi {
@@ -26,9 +27,16 @@ pub mod ffi {
         display_id: i64,
     }
 
+    #[derive(Debug, PartialEq)]
+    pub enum DesktopCaptureSourceType {
+        Screen,
+        Window,
+        ScreenOrWindow,
+    }
+
     #[derive(Clone, Debug)]
     struct DesktopCapturerOptions {
-        window_capturer: bool,
+        source_type: DesktopCaptureSourceType,
         include_cursor: bool,
         allow_sck_system_picker: bool,
     }
@@ -90,5 +98,13 @@ impl DesktopCapturerCallbackWrapper {
 
     fn on_capture_result(&mut self, result: CaptureResult, frame: UniquePtr<DesktopFrame>) {
         self.callback.on_capture_result(result, frame);
+    }
+}
+
+impl Default for DesktopCaptureSourceType {
+    fn default() -> Self {
+        // ScreenOrWindow is only implemented on Wayland, macOS, and iOS
+        // so it should not be the default.
+        DesktopCaptureSourceType::Screen
     }
 }

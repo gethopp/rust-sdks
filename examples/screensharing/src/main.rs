@@ -28,7 +28,7 @@ struct Args {
     #[arg(long)]
     capture_cursor: bool,
 
-    /// Capture a specific window (requires window ID)
+    /// Capture a window rather than a screen
     #[arg(long)]
     capture_window: bool,
 
@@ -154,12 +154,10 @@ async fn main() {
             }
         }
     };
-    let source_type = if args.capture_window {
-        DesktopCaptureSourceType::WINDOW
-    } else {
-        DesktopCaptureSourceType::SCREEN
-    };
-    let mut options = DesktopCapturerOptions::new(source_type);
+    let mut options = DesktopCapturerOptions::new();
+    if args.capture_window {
+        options.set_source_type(DesktopCaptureSourceType::Window);
+    }
     #[cfg(target_os = "macos")]
     {
         options.set_sck_system_picker(args.use_system_picker);
