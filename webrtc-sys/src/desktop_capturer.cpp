@@ -20,9 +20,7 @@ using SourceList = webrtc::DesktopCapturer::SourceList;
 
 namespace livekit {
 
-std::unique_ptr<DesktopCapturer> new_desktop_capturer(
-    rust::Box<DesktopCapturerCallbackWrapper> callback,
-    DesktopCapturerOptions options) {
+std::unique_ptr<DesktopCapturer> new_desktop_capturer(DesktopCapturerOptions options) {
   webrtc::DesktopCaptureOptions webrtc_options =
       webrtc::DesktopCaptureOptions::CreateDefault();
 #if defined(WEBRTC_MAC) && !defined(WEBRTC_IOS)
@@ -60,14 +58,12 @@ std::unique_ptr<DesktopCapturer> new_desktop_capturer(
   if (!capturer) {
     return nullptr;
   }
-  return std::make_unique<DesktopCapturer>(std::move(callback),
-                                           std::move(capturer));
+  return std::make_unique<DesktopCapturer>(std::move(capturer));
 }
 
 DesktopCapturer::DesktopCapturer(
-    rust::Box<DesktopCapturerCallbackWrapper> callback,
     std::unique_ptr<webrtc::DesktopCapturer> capturer)
-    : callback(std::move(callback)), capturer(std::move(capturer)) {}
+    : callback(rust::Box<DesktopCapturerCallbackWrapper>::from_raw(nullptr)), capturer(std::move(capturer)) {}
 
 void DesktopCapturer::OnCaptureResult(
     webrtc::DesktopCapturer::Result result,
@@ -88,6 +84,11 @@ void DesktopCapturer::OnCaptureResult(
   }
   callback->on_capture_result(ret_result,
                               std::make_unique<DesktopFrame>(std::move(frame)));
+}
+
+void DesktopCapturer::start(rust::Box<DesktopCapturerCallbackWrapper> cb) {
+    callback = std::move(cb);
+    capturer->Start(this);
 }
 
 rust::Vec<Source> DesktopCapturer::get_source_list() const {

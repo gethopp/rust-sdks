@@ -74,8 +74,35 @@ async fn main() {
     let (room, _) = Room::connect(&url, &token, RoomOptions::default()).await.unwrap();
     log::info!("Connected to room: {} - {}", room.name(), String::from(room.sid().await));
 
-    let (video_source_sender, mut video_source_receiver) = tokio::sync::mpsc::channel(1);
+    let mut options = DesktopCapturerOptions::new();
+    if args.capture_window {
+        options.set_source_type(DesktopCaptureSourceType::Window);
+    }
+    #[cfg(target_os = "macos")]
+    {
+        options.set_sck_system_picker(args.use_system_picker);
+    }
+    options.set_include_cursor(args.capture_cursor);
 
+    let mut capturer = DesktopCapturer::new(options).expect("Failed to create desktop capturer");
+    let sources = capturer.get_source_list();
+    let selected_source = if sources.len() == 0 {
+        None
+    // On Wayland, the XDG Desktop Portal presents a UI for the user
+    // to select the source and libwebrtc only returns that one source,
+    // so do not present a redundant UI here.
+    } else if sources.len() == 1 {
+        Some(sources.first().unwrap().clone())
+    } else {
+        let options: Vec<_> = sources.clone().into_iter().map(|s| s.to_string()).collect();
+        let map: HashMap<_, _> = sources.clone().into_iter().map(|s| (s.to_string(), s)).collect();
+        match inquire::Select::new("Select desktop capture source:", options).prompt() {
+            Ok(s) => Some(map.get(&s).unwrap().clone()),
+            Err(e) => panic!("{e:?}"),
+        }
+    };
+
+    let (video_source_sender, mut video_source_receiver) = tokio::sync::mpsc::channel(1);
     let callback = {
         // These dimensions are arbitrary initial values.
         // libwebrtc only exposes the resolution of the source in the DesktopFrame
@@ -154,37 +181,8 @@ async fn main() {
             }
         }
     };
-    let mut options = DesktopCapturerOptions::new();
-    if args.capture_window {
-        options.set_source_type(DesktopCaptureSourceType::Window);
-    }
-    #[cfg(target_os = "macos")]
-    {
-        options.set_sck_system_picker(args.use_system_picker);
-    }
-    options.set_include_cursor(args.capture_cursor);
-
-    let mut capturer =
-        DesktopCapturer::new(callback, options).expect("Failed to create desktop capturer");
-    let sources = capturer.get_source_list();
-    let selected_source = if sources.len() == 0 {
-        None
-    // On Wayland, the XDG Desktop Portal presents a UI for the user
-    // to select the source and libwebrtc only returns that one source,
-    // so do not present a redundant UI here.
-    } else if sources.len() == 1 {
-        Some(sources.first().unwrap().clone())
-    } else {
-        let options: Vec<_> = sources.clone().into_iter().map(|s| s.to_string()).collect();
-        let map: HashMap<_, _> = sources.clone().into_iter().map(|s| (s.to_string(), s)).collect();
-        match inquire::Select::new("Select desktop capture source:", options).prompt() {
-            Ok(s) => Some(map.get(&s).unwrap().clone()),
-            Err(e) => panic!("{e:?}"),
-        }
-    };
-
     log::info!("Starting desktop capture. Press Ctrl + C to quit.");
-    capturer.start_capture(selected_source);
+    capturer.start_capture(callback, selected_source);
 
     let ctrl_c_received = Arc::new(AtomicBool::new(false));
     tokio::spawn({
