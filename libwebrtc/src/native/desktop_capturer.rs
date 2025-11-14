@@ -13,11 +13,14 @@
 // limitations under the License.
 
 use cxx::UniquePtr;
-use webrtc_sys::desktop_capturer::{self as sys_dc, ffi::new_desktop_capturer};
+use webrtc_sys::desktop_capturer::{
+    self as sys_dc,
+    ffi::{new_desktop_capturer, DesktopCaptureSourceType},
+};
 
 #[derive(Copy, Clone, Debug)]
 pub struct DesktopCapturerOptions {
-    pub window_capturer: bool,
+    pub source_type: DesktopCaptureSourceType,
     pub include_cursor: bool,
     #[cfg(target_os = "macos")]
     pub allow_sck_system_picker: bool,
@@ -26,7 +29,7 @@ pub struct DesktopCapturerOptions {
 impl Default for DesktopCapturerOptions {
     fn default() -> Self {
         Self {
-            window_capturer: false,
+            source_type: DesktopCaptureSourceType::default(),
             include_cursor: false,
             #[cfg(target_os = "macos")]
             allow_sck_system_picker: true,
@@ -36,16 +39,16 @@ impl Default for DesktopCapturerOptions {
 
 impl DesktopCapturerOptions {
     pub(crate) fn new() -> Self {
-        Self { window_capturer: false, include_cursor: false, ..Default::default() }
+        Self { include_cursor: false, ..Default::default() }
+    }
+
+    pub(crate) fn with_source_type(mut self, source_type: DesktopCaptureSourceType) -> Self {
+        self.source_type = source_type;
+        self
     }
 
     pub(crate) fn with_cursor(mut self, include: bool) -> Self {
         self.include_cursor = include;
-        self
-    }
-
-    pub(crate) fn with_window_capturer(mut self, window_capturer: bool) -> Self {
-        self.window_capturer = window_capturer;
         self
     }
 
@@ -57,7 +60,7 @@ impl DesktopCapturerOptions {
 
     pub(crate) fn to_sys_handle(&self) -> sys_dc::ffi::DesktopCapturerOptions {
         let mut sys_handle = sys_dc::ffi::DesktopCapturerOptions {
-            window_capturer: self.window_capturer,
+            source_type: self.source_type,
             include_cursor: self.include_cursor,
             allow_sck_system_picker: false,
         };
@@ -74,13 +77,8 @@ pub struct DesktopCapturer {
 }
 
 impl DesktopCapturer {
-    pub fn new<T>(callback: T, options: DesktopCapturerOptions) -> Option<Self>
-    where
-        T: Fn(CaptureResult, DesktopFrame) + Send + 'static,
-    {
-        let callback = DesktopCallback::new(callback);
-        let callback_wrapper = sys_dc::DesktopCapturerCallbackWrapper::new(Box::new(callback));
-        let sys_handle = new_desktop_capturer(Box::new(callback_wrapper), options.to_sys_handle());
+    pub fn new(options: DesktopCapturerOptions) -> Option<Self> {
+        let sys_handle = new_desktop_capturer(options.to_sys_handle());
         if sys_handle.is_null() {
             None
         } else {
@@ -92,9 +90,14 @@ impl DesktopCapturer {
         self.sys_handle.capture_frame();
     }
 
-    pub fn start(&mut self) {
+    pub fn start<T>(&mut self, callback: T)
+    where
+        T: FnMut(CaptureResult, DesktopFrame) + Send + 'static,
+    {
+        let callback = DesktopCallback::new(callback);
+        let callback_wrapper = sys_dc::DesktopCapturerCallbackWrapper::new(Box::new(callback));
         let pin_handle = self.sys_handle.pin_mut();
-        pin_handle.start();
+        pin_handle.start(Box::new(callback_wrapper));
     }
 
     pub fn select_source(&self, id: u64) -> bool {
@@ -146,13 +149,13 @@ impl DesktopFrame {
     }
 }
 
-pub struct DesktopCallback<T: Fn(CaptureResult, DesktopFrame) + Send> {
+pub struct DesktopCallback<T: FnMut(CaptureResult, DesktopFrame) + Send> {
     callback: T,
 }
 
 impl<T> DesktopCallback<T>
 where
-    T: Fn(CaptureResult, DesktopFrame) + Send,
+    T: FnMut(CaptureResult, DesktopFrame) + Send,
 {
     pub fn new(callback: T) -> Self {
         Self { callback }
@@ -161,10 +164,10 @@ where
 
 impl<T> sys_dc::DesktopCapturerCallback for DesktopCallback<T>
 where
-    T: Fn(CaptureResult, DesktopFrame) + Send,
+    T: FnMut(CaptureResult, DesktopFrame) + Send,
 {
     fn on_capture_result(
-        &self,
+        &mut self,
         result: sys_dc::ffi::CaptureResult,
         frame: UniquePtr<sys_dc::ffi::DesktopFrame>,
     ) {

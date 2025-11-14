@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use crate::imp::desktop_capturer as imp_dc;
+pub use webrtc_sys::desktop_capturer::ffi::DesktopCaptureSourceType;
 
 /// Configuration options for creating a desktop capturer.
 ///
@@ -24,37 +25,28 @@ use crate::imp::desktop_capturer as imp_dc;
 /// ```no_run
 /// use libwebrtc::desktop_capturer::{DesktopCapturerOptions, DesktopCaptureSourceType};
 ///
-/// let mut options = DesktopCapturerOptions::new(DesktopCaptureSourceType::SCREEN);
+/// let mut options = DesktopCapturerOptions::new();
 /// options.set_include_cursor(true);
 /// ```
 pub struct DesktopCapturerOptions {
     pub(crate) sys_handle: imp_dc::DesktopCapturerOptions,
 }
 
-/// Specifies the type of source that a desktop capturer should capture.
-#[derive(Debug, PartialEq)]
-pub enum DesktopCaptureSourceType {
-    SCREEN,
-    WINDOW,
-}
-
 impl DesktopCapturerOptions {
     /// Creates a new `DesktopCapturerOptions` with default values.
     ///
-    /// # Arguments
-    ///
-    /// * `source_type` - The type of source to capture (screen or window).
-    ///
     /// # Defaults
     ///
+    /// - Capture screens (use [`set_source_type`](Self::set_source_type) to capture windows)
     /// - Cursor is not included in captured frames (use [`set_include_cursor`](Self::set_include_cursor) to change)
     /// - On macOS, the ScreenCaptureKit system picker is enabled (use [`set_sck_system_picker`](Self::set_sck_system_picker) to change)
-    pub fn new(source_type: DesktopCaptureSourceType) -> Self {
-        let mut sys_handle = imp_dc::DesktopCapturerOptions::new();
-        if source_type == DesktopCaptureSourceType::WINDOW {
-            sys_handle = sys_handle.with_window_capturer(true);
-        }
+    pub fn new() -> Self {
+        let sys_handle = imp_dc::DesktopCapturerOptions::new();
         Self { sys_handle }
+    }
+
+    pub fn set_source_type(&mut self, source_type: DesktopCaptureSourceType) {
+        self.sys_handle = self.sys_handle.with_source_type(source_type);
     }
 
     /// Sets whether to include the cursor in captured frames.
@@ -93,14 +85,8 @@ impl DesktopCapturer {
     ///
     /// Returns `Some(DesktopCapturer)` if the capturer was created successfully,
     /// or `None` if creation failed (e.g., due to platform limitations or permissions).
-    pub fn new<T>(callback: T, options: DesktopCapturerOptions) -> Option<Self>
-    where
-        T: Fn(CaptureResult, DesktopFrame) + Send + 'static,
-    {
-        let inner_callback = move |result: imp_dc::CaptureResult, frame: imp_dc::DesktopFrame| {
-            callback(capture_result_from_sys(result), DesktopFrame::new(frame));
-        };
-        let desktop_capturer = imp_dc::DesktopCapturer::new(inner_callback, options.sys_handle);
+    pub fn new(options: DesktopCapturerOptions) -> Option<Self> {
+        let desktop_capturer = imp_dc::DesktopCapturer::new(options.sys_handle);
         if desktop_capturer.is_none() {
             return None;
         }
@@ -118,11 +104,17 @@ impl DesktopCapturer {
     ///
     /// After calling this method, you must call [`capture_frame`](Self::capture_frame)
     /// to actually capture frames. This method only initializes the capture session.
-    pub fn start_capture(&mut self, source: Option<CaptureSource>) {
+    pub fn start_capture<T>(&mut self, mut callback: T, source: Option<CaptureSource>)
+    where
+        T: FnMut(CaptureResult, DesktopFrame) + Send + 'static,
+    {
         if let Some(source) = source {
             self.handle.select_source(source.sys_handle.id());
         }
-        self.handle.start();
+        let inner_callback = move |result: imp_dc::CaptureResult, frame: imp_dc::DesktopFrame| {
+            callback(capture_result_from_sys(result), DesktopFrame::new(frame));
+        };
+        self.handle.start(inner_callback);
     }
 
     /// Captures a single frame.

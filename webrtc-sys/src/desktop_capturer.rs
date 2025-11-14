@@ -16,6 +16,7 @@ use cxx::UniquePtr;
 use ffi::CaptureResult;
 
 use crate::{desktop_capturer::ffi::DesktopFrame, impl_thread_safety};
+pub use ffi::DesktopCaptureSourceType;
 
 #[cxx::bridge(namespace = "livekit")]
 pub mod ffi {
@@ -26,9 +27,16 @@ pub mod ffi {
         display_id: i64,
     }
 
+    #[derive(Debug, PartialEq)]
+    pub enum DesktopCaptureSourceType {
+        Screen,
+        Window,
+        ScreenOrWindow,
+    }
+
     #[derive(Clone, Debug)]
     struct DesktopCapturerOptions {
-        window_capturer: bool,
+        source_type: DesktopCaptureSourceType,
         include_cursor: bool,
         allow_sck_system_picker: bool,
     }
@@ -45,14 +53,11 @@ pub mod ffi {
         type DesktopCapturer;
         type DesktopFrame;
 
-        fn new_desktop_capturer(
-            callback: Box<DesktopCapturerCallbackWrapper>,
-            options: DesktopCapturerOptions,
-        ) -> UniquePtr<DesktopCapturer>;
+        fn new_desktop_capturer(options: DesktopCapturerOptions) -> UniquePtr<DesktopCapturer>;
         fn capture_frame(self: &DesktopCapturer);
         fn get_source_list(self: &DesktopCapturer) -> Vec<Source>;
         fn select_source(self: &DesktopCapturer, id: u64) -> bool;
-        fn start(self: Pin<&mut DesktopCapturer>);
+        fn start(self: Pin<&mut DesktopCapturer>, callback: Box<DesktopCapturerCallbackWrapper>);
 
         fn width(self: &DesktopFrame) -> i32;
         fn height(self: &DesktopFrame) -> i32;
@@ -66,7 +71,7 @@ pub mod ffi {
         type DesktopCapturerCallbackWrapper;
 
         fn on_capture_result(
-            self: &DesktopCapturerCallbackWrapper,
+            self: &mut DesktopCapturerCallbackWrapper,
             result: CaptureResult,
             frame: UniquePtr<DesktopFrame>,
         );
@@ -76,7 +81,7 @@ pub mod ffi {
 impl_thread_safety!(ffi::DesktopCapturer, Send + Sync);
 
 pub trait DesktopCapturerCallback: Send {
-    fn on_capture_result(&self, result: CaptureResult, frame: UniquePtr<DesktopFrame>);
+    fn on_capture_result(&mut self, result: CaptureResult, frame: UniquePtr<DesktopFrame>);
 }
 
 pub struct DesktopCapturerCallbackWrapper {
@@ -88,7 +93,15 @@ impl DesktopCapturerCallbackWrapper {
         Self { callback }
     }
 
-    fn on_capture_result(&self, result: CaptureResult, frame: UniquePtr<DesktopFrame>) {
+    fn on_capture_result(&mut self, result: CaptureResult, frame: UniquePtr<DesktopFrame>) {
         self.callback.on_capture_result(result, frame);
+    }
+}
+
+impl Default for DesktopCaptureSourceType {
+    fn default() -> Self {
+        // ScreenOrWindow is only implemented on Wayland, macOS, and iOS
+        // so it should not be the default.
+        DesktopCaptureSourceType::Screen
     }
 }
