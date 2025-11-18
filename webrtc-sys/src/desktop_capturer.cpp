@@ -29,7 +29,7 @@ std::unique_ptr<DesktopCapturer> new_desktop_capturer(
   webrtc_options.set_allow_sck_system_picker(options.allow_sck_system_picker);
 #endif /* defined(WEBRTC_MAC) && !defined(WEBRTC_IOS) */
 #ifdef _WIN64
-  if (options.window_capturer) {
+  if (options.source_type == DesktopCaptureSourceType::Window) {
     webrtc_options.set_allow_wgc_screen_capturer(true);
   } else {
     webrtc_options.set_allow_wgc_window_capturer(true);
