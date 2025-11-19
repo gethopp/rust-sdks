@@ -118,8 +118,12 @@ pub fn webrtc_dir() -> path::PathBuf {
 pub fn webrtc_defines() -> Vec<(String, Option<String>)> {
     // read preprocessor definitions from webrtc.ninja
     let defines_re = Regex::new(r"-D(\w+)(?:=([^\s]+))?").unwrap();
+    let mut files = vec![webrtc_dir().join("webrtc.ninja")];
     // include desktop_capture.ninja to avoid ABI mismatch for DesktopCaptureOptions due to WEBRTC_USE_X11 missing
-    let files = vec![webrtc_dir().join("webrtc.ninja"), webrtc_dir().join("desktop_capture.ninja")];
+    // libwebrtc does not implement desktop capture on Android
+    if env::var("CARGO_CFG_TARGET_OS").unwrap() != "android" {
+        files.push(webrtc_dir().join("desktop_capture.ninja"));
+    }
 
     let mut seen = HashSet::new();
     let mut vec = Vec::new();
