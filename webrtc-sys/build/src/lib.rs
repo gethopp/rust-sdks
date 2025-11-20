@@ -125,7 +125,8 @@ pub fn webrtc_defines() -> Vec<(String, Option<String>)> {
     let mut vec = Vec::new();
 
     for path in files {
-        let gni = fs::File::open(path).unwrap();
+        let gni = fs::File::open(&path)
+            .unwrap_or_else(|e| panic!("Could not open ninja file: {path:?}\n{e:?}"));
 
         let mut defines_line = String::default();
         io::BufReader::new(gni).read_line(&mut defines_line).unwrap();
