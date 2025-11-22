@@ -294,6 +294,13 @@ impl LocalParticipant {
                         ..Default::default()
                     }];
                 }
+
+                match options.source {
+                    TrackSource::Screenshare => {
+                        video_track.rtc_source().set_is_screencast(true);
+                    }
+                    _ => {}
+                }
             }
             LocalTrack::Audio(_audio_track) => {
                 // Setup audio encoding
