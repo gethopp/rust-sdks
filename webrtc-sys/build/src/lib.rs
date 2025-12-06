@@ -28,7 +28,7 @@ use regex::Regex;
 use reqwest::StatusCode;
 
 pub const SCRATH_PATH: &str = "livekit_webrtc";
-pub const WEBRTC_TAG: &str = "webrtc-0001d84-2";
+pub const WEBRTC_TAG: &str = "webrtc-aff432a";
 pub const IGNORE_DEFINES: [&str; 2] = ["CR_CLANG_REVISION", "CR_XCODE_VERSION"];
 
 pub fn target_os() -> String {
@@ -100,7 +100,7 @@ pub fn prebuilt_dir() -> path::PathBuf {
 
 pub fn download_url() -> String {
     format!(
-        "https://github.com/livekit/rust-sdks/releases/download/{}/{}.zip",
+        "https://github.com/gethopp/rust-sdks/releases/download/{}/{}.zip",
         WEBRTC_TAG,
         format!("webrtc-{}", webrtc_triple())
     )
