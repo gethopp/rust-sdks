@@ -40,7 +40,7 @@ license = "Apache-2.0"
 [workspace.dependencies]
 imgproc = { version = "0.3.18", path = "imgproc" }
 libwebrtc = { version = "0.3.25", path = "libwebrtc" }
-livekit = { version = "0.7.31", path = "livekit" }
+livekit = { version = "0.7.32", path = "livekit" }
 livekit-api = { version = "0.4.13", path = "livekit-api" }
 livekit-ffi = { version = "0.12.47", path = "livekit-ffi" }
 livekit-protocol = { version = "0.7.0", path = "livekit-protocol" }
