@@ -36,6 +36,10 @@ impl RtpReceiver {
     pub fn parameters(&self) -> RtpParameters {
         self.handle.parameters()
     }
+
+    pub fn set_jitter_buffer_minimum_delay(&self, delay_seconds: Option<f64>) {
+        self.handle.set_jitter_buffer_minimum_delay(delay_seconds)
+    }
 }
 
 impl Debug for RtpReceiver {

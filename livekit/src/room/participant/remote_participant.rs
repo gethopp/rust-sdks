@@ -161,6 +161,10 @@ impl RemoteParticipant {
                 }
             };
 
+            // Set jitter buffer minimum delay to 0 for lowest latency
+            let receiver = transceiver.receiver();
+            receiver.set_jitter_buffer_minimum_delay(Some(0.0));
+
             track.set_transceiver(Some(transceiver));
 
             //track.set_muted(remote_publication.is_muted());
